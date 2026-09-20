@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>小四數學：除法均分與包含直式視覺化教具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans TC', sans-serif; background-color: #f8fafc; }
+    .font-math { font-family: 'JetBrains Mono', monospace; }
+    
+    /* 嚴格香港小學除法直式 Table 排版，保證永不折行 */
+    .division-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+      margin: 0 auto;
+    }
+    .division-table td {
+      text-align: center;
+      vertical-align: middle;
+      height: 48px;
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 0;
+      white-space: nowrap;
+    }
+    .div-roof { border-top: 4px solid #0f172a; }
+    .div-curve {
+      border-right: 4px solid #0f172a;
+      border-top-right-radius: 20px;
+    }
+    .div-sub-line { border-bottom: 4px solid #0f172a; }
+
+    /* 數粒樣式 */
+    .ten-rod {
+      display: flex;
+      flex-direction: column;
+      width: 22px;
+      height: 120px;
+      background: #3b82f6;
+      border: 2px solid #1d4ed8;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.15s;
+    }
+    .ten-rod:hover { transform: scale(1.05); }
+    .ten-rod-cell {
+      flex: 1;
+      border-bottom: 1px solid rgba(255,255,255,0.4);
+    }
+    .ten-rod-cell:last-child { border-bottom: none; }
+
+    .unit-cube {
+      width: 22px;
+      height: 22px;
+      background: #facc15;
+      border: 2px solid #ca8a04;
+      border-radius: 3px;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: transform 0.15s;
+    }
+    .unit-cube:hover { transform: scale(1.1); }
+  </style>
+</head>
+<body class="p-4 md:p-8 text-slate-800">
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- 頂部標題與自訂題目 -->
+    <header class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full uppercase">香港小學小四數學</span>
+          <h1 class="text-2xl md:text-3xl font-black text-slate-900 mt-1">除法實體分裝與直式即時同步教具</h1>
+          <p class="text-sm text-slate-500 mt-0.5">點擊裝滿禮盒，觀察右側直式商與減法橫線、餘數的每一步變化</p>
+        </div>
+        
+        <!-- 自訂題目區 -->
+        <div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <div class="flex items-center gap-1">
+            <label class="text-xs font-bold text-slate-600">被除數:</label>
+            <input type="number" id="inputDividend" value="74" min="10" max="99" class="w-16 px-2 py-1 bg-white border border-slate-300 rounded font-bold text-center">
+          </div>
+          <span class="text-slate-400 font-bold">÷</span>
+          <div class="flex items-center gap-1">
+            <label class="text-xs font-bold text-slate-600">除數:</label>
+            <select id="inputDivisor" class="px-2 py-1 bg-white border border-slate-300 rounded font-bold text-center">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="30">30</option>
+              <option value="40">40</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+          <button onclick="applyCustomProblem()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition">出題</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主操作區域 -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- 左側：倉庫與禮盒分裝區 (7 欄) -->
+      <div class="lg:col-span-7 space-y-6">
+        
+        <!-- 倉庫 -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🏭</span>
+              <h2 class="font-bold text-slate-800">糖果倉庫 (待分裝)</h2>
+              <span id="warehouseBadge" class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-0.5 rounded-full font-math">剩餘 74 粒</span>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="decomposeRod()" class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 px-2 py-1 rounded font-semibold transition">🔨 拆散1條十格棒</button>
+              <button onclick="composeRod()" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-300 px-2 py-1 rounded font-semibold transition">🧩 合成十格棒</button>
+            </div>
+          </div>
+
+          <!-- 倉庫數粒展示 -->
+          <div id="warehousePool" class="min-h-[140px] bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-4 flex flex-wrap items-center gap-3">
+            <!-- 數粒由 JS 動態生成 -->
+          </div>
+          <p class="text-xs text-slate-400 mt-2">💡 提示：可以直接點擊上方數粒放入第一個未滿的禮盒中。</p>
+        </div>
+
+        <!-- 禮盒分裝區 -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+          <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🎁</span>
+              <h2 class="font-bold text-slate-800">禮盒分裝區 (<span id="boxCapacityText">每盒裝 20 粒</span>)</h2>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="fillNextBox()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold shadow-sm transition">⚡ 裝滿下一盒</button>
+              <button onclick="resetAllBoxes()" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg font-bold transition">全部清空</button>
+            </div>
+          </div>
+
+          <!-- 盒子容器列表 -->
+          <div id="boxesContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- 盒子由 JS 動態生成 -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 右側：香港小學標準直式與位值教學區 (5 欄) -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col items-center">
+          <div class="w-full flex justify-between items-center border-b pb-3 mb-4">
+            <h3 class="font-black text-slate-800 flex items-center gap-1.5">
+              <span>📐</span> 香港小學標準除法直式
+            </h3>
+            <span class="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded font-bold">同步連動中</span>
+          </div>
+
+          <!-- 位值標籤 -->
+          <div class="w-full max-w-[240px] flex justify-end pr-3 mb-1 text-xs font-bold">
+            <span class="w-[44px] text-center text-indigo-600">十位</span>
+            <span class="w-[44px] text-center text-amber-600">個位</span>
+          </div>
+
+          <!-- 核心直式表格 (保證對齊與橫線正確) -->
+          <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner w-full flex justify-center overflow-x-auto">
+            <table class="division-table">
+              <colgroup>
+                <col style="width: 70px;">
+                <col style="width: 44px;">
+                <col style="width: 44px;">
+              </colgroup>
+
+              <!-- Row 1: 商 (Quotient) -->
+              <tr>
+                <td></td>
+                <td id="vTensQuotient" class="text-slate-300">-</td>
+                <td id="vOnesQuotient" class="text-indigo-600 font-extrabold">-</td>
+              </tr>
+
+              <!-- Row 2: 廠字除號與被除數 (Dividend) -->
+              <tr>
+                <td id="vDivisor" class="text-slate-700 div-curve pr-2">20</td>
+                <td id="vDividendTens" class="div-roof text-slate-800">7</td>
+                <td id="vDividendOnes" class="div-roof text-slate-800">4</td>
+              </tr>
+
+              <!-- Row 3: 乘積/已分走數量 (Subtracted Product) - 下方有深色減法橫線 -->
+              <tr>
+                <td class="text-slate-400 text-sm font-normal text-right pr-2">－</td>
+                <td id="vSubTens" class="div-sub-line text-emerald-600">-</td>
+                <td id="vSubOnes" class="div-sub-line text-emerald-600">-</td>
+              </tr>
+
+              <!-- Row 4: 剩餘數量 / 餘數 (Remainder) - 落在橫線正下方 -->
+              <tr>
+                <td></td>
+                <td id="vRemTens" class="text-amber-600 font-extrabold">-</td>
+                <td id="vRemOnes" class="text-amber-600 font-extrabold">-</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- 直式每步即時解讀卡片 -->
+          <div class="w-full mt-5 bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs space-y-2">
+            <div class="flex items-center gap-1.5 text-amber-900 font-bold text-sm">
+              <span>💡</span> <span>直式即時解析：</span>
+            </div>
+            <p id="stepExplanation" class="text-amber-800 leading-relaxed">
+              尚未裝滿任何禮盒。請在左側點擊「⚡ 裝滿下一盒」開始分裝！
+            </p>
+          </div>
+
+          <!-- 驗算式 -->
+          <div class="w-full mt-4 bg-slate-100 rounded-xl p-3 text-center">
+            <div class="text-xs text-slate-500 font-semibold mb-1">橫式驗算關係</div>
+            <div id="checkEquation" class="font-math font-bold text-sm text-slate-700">
+              74 = 20 × 0 + 74
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 不夠糖果警告 Modal -->
+  <div id="warnModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-red-100 text-center space-y-4">
+      <div class="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-2xl">⚠️</div>
+      <h3 class="text-lg font-black text-slate-900">糖果數量不足！</h3>
+      <p id="warnModalText" class="text-sm text-slate-600 leading-relaxed"></p>
+      <button onclick="closeWarnModal()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl transition">明白，我知喇！</button>
+    </div>
+  </div>
+
+  <!-- 應用程式邏輯 -->
+  <script>
+    let dividend = 74;
+    let divisor = 20;
+
+    let warehouseRods = 7;
+    let warehouseCubes = 4;
+    let boxes = [];
+
+    function initProblem() {
+      warehouseRods = Math.floor(dividend / 10);
+      warehouseCubes = dividend % 10;
+      const numBoxes = Math.floor(dividend / divisor) + 1;
+      boxes = [];
+      for (let i = 0; i < numBoxes; i++) {
+        boxes.push({ id: i + 1, rods: 0, cubes: 0 });
+      }
+      document.getElementById('inputDividend').value = dividend;
+      document.getElementById('inputDivisor').value = divisor;
+      document.getElementById('boxCapacityText').innerText = `每盒裝 ${divisor} 粒`;
+      renderAll();
+    }
+
+    function renderAll() {
+      const warehouseTotal = warehouseRods * 10 + warehouseCubes;
+      document.getElementById('warehouseBadge').innerText = `剩餘 ${warehouseTotal} 粒`;
+
+      // 渲染倉庫
+      const pool = document.getElementById('warehousePool');
+      pool.innerHTML = '';
+      for (let i = 0; i < warehouseRods; i++) {
+        const rod = document.createElement('div');
+        rod.className = 'ten-rod';
+        rod.title = '點擊放入盒子';
+        rod.onclick = () => addRodToFirstAvailableBox();
+        for (let j = 0; j < 10; j++) {
+          const cell = document.createElement('div');
+          cell.className = 'ten-rod-cell';
+          rod.appendChild(cell);
+        }
+        pool.appendChild(rod);
+      }
+      for (let i = 0; i < warehouseCubes; i++) {
+        const cube = document.createElement('div');
+        cube.className = 'unit-cube';
+        cube.title = '點擊放入盒子';
+        cube.onclick = () => addCubeToFirstAvailableBox();
+        pool.appendChild(cube);
+      }
+      if (warehouseTotal === 0) {
+        pool.innerHTML = '<span class="text-sm text-slate-400 m-auto">倉庫已經空空如也喇！</span>';
+      }
+
+      // 渲染禮盒
+      const boxesContainer = document.getElementById('boxesContainer');
+      boxesContainer.innerHTML = '';
+      boxes.forEach(box => {
+        const boxTotal = box.rods * 10 + box.cubes;
+        const isFull = boxTotal === divisor;
+        const isOverflow = boxTotal > divisor;
+
+        const boxDiv = document.createElement('div');
+        // 未裝滿：紅色邊框與粉紅底色；裝滿：綠色
+        if (isFull) {
+          boxDiv.className = 'bg-emerald-50/60 border-2 border-emerald-500 rounded-xl p-3.5 flex flex-col justify-between shadow-sm transition';
+        } else if (isOverflow) {
+          boxDiv.className = 'bg-red-100 border-2 border-red-500 rounded-xl p-3.5 flex flex-col justify-between shadow-sm transition';
+        } else {
+          boxDiv.className = 'bg-red-50/40 border-2 border-red-300 rounded-xl p-3.5 flex flex-col justify-between shadow-sm transition';
+        }
+
+        let badgeHtml = '';
+        if (isFull) {
+          badgeHtml = '<span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">✅ 已裝滿</span>';
+        } else if (isOverflow) {
+          badgeHtml = `<span class="text-xs bg-red-200 text-red-800 font-bold px-2 py-0.5 rounded-full">⚠️ 超過 ${boxTotal} 粒</span>`;
+        } else {
+          badgeHtml = `<span class="text-xs bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full">❌ 未滿 (${boxTotal} / ${divisor})</span>`;
+        }
+
+        boxDiv.innerHTML = `
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-bold text-sm text-slate-800">禮盒 #${box.id}</span>
+              ${badgeHtml}
+            </div>
+            <div class="min-h-[70px] bg-white/80 rounded-lg p-2 border border-slate-200 flex flex-wrap items-center gap-2 mb-2">
+              ${renderBoxItems(box)}
+            </div>
+          </div>
+          <div class="flex gap-1.5 pt-2 border-t border-slate-200/60">
+            <button onclick="fillSingleBox(${box.id})" class="text-[11px] bg-blue-600 hover:bg-blue-700 text-white font-bold px-2 py-1 rounded flex-1">裝滿呢盒 (+${divisor})</button>
+            <button onclick="clearSingleBox(${box.id})" class="text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-2 py-1 rounded">清空</button>
+          </div>
+        `;
+        boxesContainer.appendChild(boxDiv);
+      });
+
+      syncVerticalDivision();
+    }
+
+    function renderBoxItems(box) {
+      let html = '';
+      for (let i = 0; i < box.rods; i++) {
+        html += '<div class="ten-rod !h-[60px] !w-[16px]" title="點擊退回倉庫" onclick="returnRodFromBox(' + box.id + ')"><div class="ten-rod-cell"></div><div class="ten-rod-cell"></div><div class="ten-rod-cell"></div><div class="ten-rod-cell"></div><div class="ten-rod-cell"></div></div>';
+      }
+      for (let i = 0; i < box.cubes; i++) {
+        html += '<div class="unit-cube !w-[16px] !h-[16px]" title="點擊退回倉庫" onclick="returnCubeFromBox(' + box.id + ')"></div>';
+      }
+      return html || '<span class="text-xs text-slate-300">尚未放入糖果</span>';
+    }
+
+    // 核心：直式同步連動邏輯
+    function syncVerticalDivision() {
+      const fullBoxes = boxes.filter(b => (b.rods * 10 + b.cubes) === divisor).length;
+      const subTotal = fullBoxes * divisor;
+      const stepRemainder = dividend - subTotal;
+
+      document.getElementById('vDivisor').innerText = divisor;
+      document.getElementById('vDividendTens').innerText = Math.floor(dividend / 10);
+      document.getElementById('vDividendOnes').innerText = dividend % 10;
+
+      const vTensQuotient = document.getElementById('vTensQuotient');
+      const vOnesQuotient = document.getElementById('vOnesQuotient');
+      const vSubTens = document.getElementById('vSubTens');
+      const vSubOnes = document.getElementById('vSubOnes');
+      const vRemTens = document.getElementById('vRemTens');
+      const vRemOnes = document.getElementById('vRemOnes');
+      const stepExplanation = document.getElementById('stepExplanation');
+      const checkEquation = document.getElementById('checkEquation');
+
+      vTensQuotient.innerText = ''; // 十位永遠為空（兩位除以整十數）
+
+      if (fullBoxes === 0) {
+        vOnesQuotient.innerText = '-';
+        vSubTens.innerText = '-';
+        vSubOnes.innerText = '-';
+        vRemTens.innerText = '-';
+        vRemOnes.innerText = '-';
+        stepExplanation.innerHTML = `尚未裝滿任何禮盒。請點擊「⚡ 裝滿下一盒」開始分裝！`;
+        checkEquation.innerText = `${dividend} = ${divisor} × 0 + ${dividend}`;
+      } else {
+        // 商顯示在個位
+        vOnesQuotient.innerText = fullBoxes;
+
+        // 分走列 (減數)
+        vSubTens.innerText = Math.floor(subTotal / 10);
+        vSubOnes.innerText = subTotal % 10;
+
+        // 剩餘列 (減法橫線下方)
+        vRemTens.innerText = stepRemainder >= 10 ? Math.floor(stepRemainder / 10) : '';
+        vRemOnes.innerText = stepRemainder % 10;
+
+        // 說明文字
+        if (stepRemainder >= divisor) {
+          stepExplanation.innerHTML = `
+            已裝滿 <b>${fullBoxes}</b> 盒，分走咗 <b>${subTotal}</b> 粒。<br>
+            直式橫線下方剩餘 <b>${stepRemainder}</b> 粒。因為剩餘量大過或等於 ${divisor}，<strong>仲可以繼續裝下一盒！</strong>
+          `;
+        } else {
+          stepExplanation.innerHTML = `
+            已裝滿 <b>${fullBoxes}</b> 盒（商 = <b>${fullBoxes}</b> 寫在個位）。<br>
+            直式橫線下方剩餘 <b>${stepRemainder}</b> 粒。餘數 (${stepRemainder}) 小於除數 (${divisor})，<strong>分裝大功告成！</strong>
+          `;
+        }
+
+        checkEquation.innerText = `${dividend} = ${divisor} × ${fullBoxes} + ${stepRemainder}`;
+      }
+    }
+
+    // 填裝與防錯控制
+    function fillSingleBox(boxId) {
+      const box = boxes.find(b => b.id === boxId);
+      if (!box) return;
+
+      const currentTotal = box.rods * 10 + box.cubes;
+      const needed = divisor - currentTotal;
+      const warehouseTotal = warehouseRods * 10 + warehouseCubes;
+
+      if (needed <= 0) return;
+
+      if (warehouseTotal < needed) {
+        showWarnModal(warehouseTotal, needed);
+        return;
+      }
+
+      // 從倉庫分配
+      let remainingToFill = needed;
+      while (remainingToFill >= 10 && warehouseRods > 0) {
+        box.rods++;
+        warehouseRods--;
+        remainingToFill -= 10;
+      }
+      if (remainingToFill > 0 && warehouseCubes < remainingToFill && warehouseRods > 0) {
+        warehouseRods--;
+        warehouseCubes += 10;
+      }
+      while (remainingToFill > 0 && warehouseCubes > 0) {
+        box.cubes++;
+        warehouseCubes--;
+        remainingToFill--;
+      }
+
+      renderAll();
+    }
+
+    function fillNextBox() {
+      const targetBox = boxes.find(b => (b.rods * 10 + b.cubes) < divisor);
+      if (!targetBox) {
+        const warehouseTotal = warehouseRods * 10 + warehouseCubes;
+        showWarnModal(warehouseTotal, divisor);
+        return;
+      }
+      fillSingleBox(targetBox.id);
+    }
+
+    function clearSingleBox(boxId) {
+      const box = boxes.find(b => b.id === boxId);
+      if (!box) return;
+      warehouseRods += box.rods;
+      warehouseCubes += box.cubes;
+      box.rods = 0;
+      box.cubes = 0;
+      renderAll();
+    }
+
+    function resetAllBoxes() {
+      boxes.forEach(b => {
+        warehouseRods += b.rods;
+        warehouseCubes += b.cubes;
+        b.rods = 0;
+        b.cubes = 0;
+      });
+      renderAll();
+    }
+
+    function decomposeRod() {
+      if (warehouseRods <= 0) {
+        alert("倉庫沒有十格棒可以拆散！");
+        return;
+      }
+      warehouseRods--;
+      warehouseCubes += 10;
+      renderAll();
+    }
+
+    function composeRod() {
+      if (warehouseCubes < 10) {
+        alert("倉庫至少需要 10 粒散粒才能組裝成 1 條十格棒！");
+        return;
+      }
+      warehouseCubes -= 10;
+      warehouseRods++;
+      renderAll();
+    }
+
+    function addRodToFirstAvailableBox() {
+      const target = boxes.find(b => (b.rods * 10 + b.cubes) < divisor);
+      if (!target || warehouseRods <= 0) return;
+      target.rods++;
+      warehouseRods--;
+      renderAll();
+    }
+
+    function addCubeToFirstAvailableBox() {
+      const target = boxes.find(b => (b.rods * 10 + b.cubes) < divisor);
+      if (!target || warehouseCubes <= 0) return;
+      target.cubes++;
+      warehouseCubes--;
+      renderAll();
+    }
+
+    function returnRodFromBox(boxId) {
+      const box = boxes.find(b => b.id === boxId);
+      if (box && box.rods > 0) {
+        box.rods--;
+        warehouseRods++;
+        renderAll();
+      }
+    }
+
+    function returnCubeFromBox(boxId) {
+      const box = boxes.find(b => b.id === boxId);
+      if (box && box.cubes > 0) {
+        box.cubes--;
+        warehouseCubes++;
+        renderAll();
+      }
+    }
+
+    function showWarnModal(remaining, needed) {
+      const modal = document.getElementById('warnModal');
+      const text = document.getElementById('warnModalText');
+      text.innerHTML = `
+        倉庫只剩返 <b class="text-amber-600">${remaining}</b> 粒，但裝滿一盒需要 <b class="text-blue-600">${needed}</b> 粒！<br><br>
+        因為剩餘的糖果已經不足以再裝滿一盒，這些就是【<strong>餘數</strong>】！
+      `;
+      modal.classList.remove('hidden');
+    }
+
+    function closeWarnModal() {
+      document.getElementById('warnModal').classList.add('hidden');
+    }
+
+    function applyCustomProblem() {
+      const divVal = parseInt(document.getElementById('inputDividend').value);
+      const divrVal = parseInt(document.getElementById('inputDivisor').value);
+
+      if (isNaN(divVal) || divVal < 10 || divVal > 99) {
+        alert("請輸入 10 至 99 之間的被除數！");
+        return;
+      }
+      dividend = divVal;
+      divisor = divrVal;
+      initProblem();
+    }
+
+    // 啟動初始化
+    initProblem();
+  </script>
+</body>
+</html>
